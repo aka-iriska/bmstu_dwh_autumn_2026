@@ -1,0 +1,16 @@
+Исходные события для самостоятельного построения SCD2
+
+1. scripts/generate_event_log.py из этого комплекта.
+2. Готовый campaigns.csv — его генерировать заново не нужно.
+3. Эту инструкцию.
+
+python3 generate_event_log.py \
+  --rows 5000000 \
+  --users 100000 \
+  --change-probability 0.20 \
+  --seed 42 \
+  --start-time 2026-01-01T00:00:00Z \
+  --max-step-seconds 1 \
+  --user-id-start 1 \
+  --rows-per-file 100000 \
+  --output-dir event_log_22

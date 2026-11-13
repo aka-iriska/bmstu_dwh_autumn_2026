@@ -1,0 +1,8 @@
+[project]
+name = "hw2-1"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.14"
+dependencies = [
+    "pyspark>=4.3.0",
+]

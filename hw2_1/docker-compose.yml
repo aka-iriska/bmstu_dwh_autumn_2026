@@ -1,0 +1,110 @@
+# Адреса в браузере после запуска:
+#   Jupyter:        http://localhost:8888/?token=dwh
+#   RustFS консоль: http://localhost:9001  (логин и пароль rustfsadmin) — тут видно содержимое S3
+#   Spark master:   http://localhost:8080
+
+name: dwh-hw2-1
+
+# Общие куски настроек, чтобы не повторять их в каждом сервисе (&spark и &s3-env — «закладки»,
+# <<: *spark ниже значит «вставь сюда то, что под закладкой spark»).
+x-spark: &spark
+  image: dwh-hw2-1-spark:3.5.3   # один и тот же образ для мастера, воркера и Jupyter
+  build: ./spark                 # собирается по файлу spark/Dockerfile
+
+x-s3-env: &s3-env
+  # Как достучаться до S3 изнутри Docker: имя сервиса rustfs + порт 9000, и логин/пароль.
+  # Эти переменные читает build_scd2.py (os.environ["S3_ENDPOINT"] и т.д.).
+  S3_ENDPOINT: http://rustfs:9000
+  S3_ACCESS_KEY: rustfsadmin
+  S3_SECRET_KEY: rustfsadmin
+
+services:
+  # 1. Подготовка папки для данных S3. RustFS работает от пользователя с номером 10001,
+  #    а новая папка (том rustfs-data) принадлежит root, поэтому сначала отдаём её RustFS.
+  #    Контейнер выполняет одну команду и завершается.
+  rustfs-perms:
+    image: alpine:3.24
+    command: chown -R 10001:10001 /data
+    volumes:
+      - rustfs-data:/data
+
+  # 2. СОЗДАЁТСЯ S3: запускается сервер RustFS. Пока он пустой, без бакетов.
+  rustfs:
+    image: rustfs/rustfs:1.0.4
+    depends_on:
+      rustfs-perms:
+        condition: service_completed_successfully   # стартуем, когда папка подготовлена
+    environment:
+      RUSTFS_VOLUMES: /data                 # где внутри контейнера хранить файлы
+      RUSTFS_ADDRESS: 0.0.0.0:9000          # порт 9000 — S3 API, через него ходят программы
+      RUSTFS_CONSOLE_ENABLE: "true"         # включить веб-консоль
+      RUSTFS_CONSOLE_ADDRESS: 0.0.0.0:9001  # порт 9001 — веб-консоль для человека
+      RUSTFS_ACCESS_KEY: rustfsadmin        # логин
+      RUSTFS_SECRET_KEY: rustfsadmin        # пароль
+    ports:                                  # порты доступны только с localhost
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - rustfs-data:/data   # файлы S3 лежат в томе Docker и не пропадают после остановки
+    healthcheck:            # Docker раз в 10 с проверяет, что RustFS запустился и отвечает
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9000/health >/dev/null || exit 1"]
+      interval: 10s
+      retries: 10
+
+  # 3. S3 ЗАПОЛНЯЕТСЯ ДАННЫМИ. mc — консольный клиент для S3 (как проводник для файлов).
+  #    Он выполняет три команды и завершается:
+  #      mc alias set — запомнить адрес и ключи RustFS под именем rustfs
+  #      mc mb        — создать бакет hw2-1 (если его ещё нет)
+  #      mc mirror    — скопировать CSV из event_log/ в hw2-1/events/ (это «исходная таблица»);
+  #                     --remove удаляет в S3 файлы, которых нет в event_log/, --exclude пропускает
+  #                     служебный _manifest.json генератора
+  rustfs-init:
+    image: minio/mc:latest
+    depends_on:
+      rustfs:
+        condition: service_healthy   # ждём, пока RustFS пройдёт healthcheck
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        mc alias set rustfs http://rustfs:9000 rustfsadmin rustfsadmin &&
+        mc mb --ignore-existing rustfs/hw2-1 &&
+        mc mirror --overwrite --remove --exclude "*.json" /data/event_log rustfs/hw2-1/events
+    volumes:
+      - ./event_log:/data/event_log:ro   # папка event_log/ с диска видна контейнеру как /data/event_log
+
+  # 4. Spark-кластер. Мастер раздаёт задачи, воркер их выполняет (4 ядра, 2 ГБ памяти).
+  spark-master:
+    <<: *spark
+    hostname: spark-master
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master --host spark-master
+    ports:
+      - "127.0.0.1:8080:8080"   # веб-страница мастера: видно воркер и запущенные задачи
+
+  spark-worker:
+    <<: *spark
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077 --cores 4 --memory 2G
+    depends_on:
+      - spark-master
+
+  # 5. Jupyter. Здесь запускаются build_scd2.py (в терминале Jupyter) и ноутбук hw2_1.ipynb.
+  jupyter:
+    <<: *spark
+    hostname: jupyter
+    command: python3 -m notebook --ip=0.0.0.0 --no-browser --ServerApp.token=dwh
+    depends_on:
+      rustfs-init:
+        condition: service_completed_successfully   # стартуем, когда данные уже в S3
+      spark-worker:
+        condition: service_started
+    environment:
+      <<: *s3-env                          # адрес и пароль S3 для build_scd2.py
+      SPARK_MASTER: spark://spark-master:7077   # куда build_scd2.py отправляет вычисления
+      SPARK_DRIVER_HOST: jupyter                # по какому имени воркер найдёт Jupyter
+    ports:
+      - "127.0.0.1:8888:8888"
+    volumes:
+      - .:/home/spark/work   # папка проекта видна в Jupyter: build_scd2.py, hw2_1.ipynb, event_log/
+
+# Том Docker, где RustFS хранит файлы S3. `docker compose down` его не трогает, `down -v` удаляет.
+volumes:
+  rustfs-data:
