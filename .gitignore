@@ -1,0 +1,19 @@
+# Библиотеки, окружения, служебное
+.venv/
+venv/
+__pycache__/
+.ipynb_checkpoints/
+.idea/
+.env
+.DS_Store
+__MACOSX/
+
+# Данные
+*.zip
+bible.txt
+Poseschenia_sai_774_tov.csv
+hw1_2/spark-infra/data/
+hw2_1/event_log/
+hw2_2/event_log_22/
+hw2_2/task2/
+hw2_2/task3/
