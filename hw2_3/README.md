@@ -36,7 +36,8 @@ docker compose ps -a
 | Сервис | Адрес на компьютере | Учебные данные входа |
 | --- | --- | --- |
 | Airflow | http://localhost:8080 | `student` / `student` |
-| RustFS Console | http://localhost:9001 | `hw23student` / `hw23student-secret` |
+| Jupyter | http://localhost:8888/?token=dwh | токен уже в ссылке |
+| RustFS (S3) | http://localhost:9001 | `rustfsadmin` / `rustfsadmin` |
 | S3 API | http://localhost:9000 | Те же ключи, что для RustFS |
 
 Порты и пароли задаются в `.env`. Порты стенда доступны только на `127.0.0.1`. Если порт занят, измените его в `.env` и повторите `docker compose up -d`.
@@ -135,3 +136,12 @@ docker compose down       # удалить контейнеры, сохрани�
 Команда `docker compose down -v` удалит также данные RustFS, историю Airflow и логи. Она нужна только для намеренного полного сброса.
 
 Документация: [Airflow 2.10.5](https://airflow.apache.org/docs/apache-airflow/2.10.5/), [интервалы DAG](https://airflow.apache.org/docs/apache-airflow/2.10.5/core-concepts/dag-run.html), [Spark 3.5.4](https://spark.apache.org/docs/3.5.4/).
+
+## Результаты
+
+**Airflow:** три запуска по расписанию, обе задачи в каждом выполнены успешно.
+
+![Airflow: DAG hw23_scd2_campaigns](img/airflow.png)
+
+**Выгрузка таблиц** ([results/](results/)): копия партиций из `s3://hw23/results/demo/` после повторного запуска,
+сделана последней ячейкой ноутбука.
