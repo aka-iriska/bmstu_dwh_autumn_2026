@@ -10,7 +10,7 @@ ENV JAVA_HOME=/opt/java
 COPY docker/constraints-3.11.txt /tmp/constraints.txt
 USER airflow
 RUN pip install --no-cache-dir --constraint /tmp/constraints.txt \
-    apache-airflow==2.10.5 pyspark==3.5.4 boto3==1.36.3
+    apache-airflow==2.10.5 pyspark==3.5.4 boto3==1.36.3 notebook==7.2.2
 
 # PySpark 3.5.4 ships Hadoop 3.3.4. S3A needs these two matching jars.
 # Download once at image build time; scheduled tasks need no Internet access.
