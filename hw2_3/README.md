@@ -143,5 +143,14 @@ docker compose down       # удалить контейнеры, сохрани�
 
 ![Airflow: DAG hw23_scd2_campaigns](img/airflow.png)
 
+**DAG Runs**: три запуска, их Run Id `scheduled__2026-01-2X…`, тип `scheduled` и состояние `success`.
+
+![Airflow: DAG Runs](img/dag_runs.png)
+
+**Task Instances**: обе задачи каждого запуска в состоянии `success`.
+Задачи запуска за 23.01 стартовали в 15:06, позже запусков за 24.01 и 25.01 (15:04–15:05): это повторное выполнение после Clear.
+
+![Airflow: Task Instances](img/task_instances.png)
+
 **Выгрузка таблиц** ([results/](results/)): копия партиций из `s3://hw23/results/demo/` после повторного запуска,
 сделана последней ячейкой ноутбука.
