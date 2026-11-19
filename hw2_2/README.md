@@ -15,10 +15,10 @@
 | Адрес | Что открывает | Логин |
 |---|---|---|
 | http://localhost:8888/?token=dwh | Jupyter, здесь ноутбук | токен `dwh` уже в ссылке |
-| http://localhost:4040 | Spark UI приложения из ноутбука: Jobs, Stages (shuffle, spill, время задач), SQL (физические планы). Работает, пока в ноутбуке открыта Spark-сессия | — |
-| http://localhost:8080 | Spark master: воркер и запущенные приложения | — |
+| http://localhost:4040 | Spark UI приложения из ноутбука: Jobs, Stages (shuffle, spill, время задач), SQL (физические планы). Работает, пока в ноутбуке открыта Spark-сессия | – |
+| http://localhost:8080 | Spark master: воркер и запущенные приложения | – |
 | http://localhost:9001 | консоль RustFS (S3): видно файлы в бакете `hw2-2` | `rustfsadmin` / `rustfsadmin` |
-| http://localhost:9000 | S3 API (для программ, в браузере не нужен) | — |
+| http://localhost:9000 | S3 API (для программ, в браузере не нужен) | – |
 
 ## Файлы
 
@@ -31,7 +31,7 @@
 
 Входы в S3: `s3a://hw2-2/{events,task1,task2,task3}/`. Туда же пишутся SCD2 (`s3a://hw2-2/users_scd2/`) и результаты (`s3a://hw2-2/results/`).
 
-Генерация событий — на хосте **до** `docker compose up` (генератору нужен Python 3.10+, в контейнере 3.8):
+Генерация событий – на хосте **до** `docker compose up` (генератору нужен Python 3.10+, в контейнере 3.8):
 
 ```
 uv run python generate_event_log_1.py --rows 5000000 --users 100000 --change-probability 0.20 --seed 42 --start-time 2026-01-01T00:00:00Z --max-step-seconds 1 --user-id-start 1 --rows-per-file 100000 --output-dir event_log_22 --overwrite

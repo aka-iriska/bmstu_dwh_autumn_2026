@@ -1,11 +1,11 @@
 # Адреса в браузере после запуска:
 #   Jupyter:        http://localhost:8888/?token=dwh
-#   RustFS консоль: http://localhost:9001  (логин и пароль rustfsadmin) — тут видно содержимое S3
+#   RustFS консоль: http://localhost:9001  (логин и пароль rustfsadmin) – тут видно содержимое S3
 #   Spark master:   http://localhost:8080
 
 name: dwh-hw2-1
 
-# Общие куски настроек, чтобы не повторять их в каждом сервисе (&spark и &s3-env — «закладки»,
+# Общие куски настроек, чтобы не повторять их в каждом сервисе (&spark и &s3-env – «закладки»,
 # <<: *spark ниже значит «вставь сюда то, что под закладкой spark»).
 x-spark: &spark
   image: dwh-hw2-1-spark:3.5.3   # один и тот же образ для мастера, воркера и Jupyter
@@ -36,9 +36,9 @@ services:
         condition: service_completed_successfully   # стартуем, когда папка подготовлена
     environment:
       RUSTFS_VOLUMES: /data                 # где внутри контейнера хранить файлы
-      RUSTFS_ADDRESS: 0.0.0.0:9000          # порт 9000 — S3 API, через него ходят программы
+      RUSTFS_ADDRESS: 0.0.0.0:9000          # порт 9000 – S3 API, через него ходят программы
       RUSTFS_CONSOLE_ENABLE: "true"         # включить веб-консоль
-      RUSTFS_CONSOLE_ADDRESS: 0.0.0.0:9001  # порт 9001 — веб-консоль для человека
+      RUSTFS_CONSOLE_ADDRESS: 0.0.0.0:9001  # порт 9001 – веб-консоль для человека
       RUSTFS_ACCESS_KEY: rustfsadmin        # логин
       RUSTFS_SECRET_KEY: rustfsadmin        # пароль
     ports:                                  # порты доступны только с localhost
@@ -51,11 +51,11 @@ services:
       interval: 10s
       retries: 10
 
-  # 3. S3 ЗАПОЛНЯЕТСЯ ДАННЫМИ. mc — консольный клиент для S3 (как проводник для файлов).
+  # 3. S3 ЗАПОЛНЯЕТСЯ ДАННЫМИ. mc – консольный клиент для S3 (как проводник для файлов).
   #    Он выполняет три команды и завершается:
-  #      mc alias set — запомнить адрес и ключи RustFS под именем rustfs
-  #      mc mb        — создать бакет hw2-1 (если его ещё нет)
-  #      mc mirror    — скопировать CSV из event_log/ в hw2-1/events/ (это «исходная таблица»);
+  #      mc alias set – запомнить адрес и ключи RustFS под именем rustfs
+  #      mc mb        – создать бакет hw2-1 (если его ещё нет)
+  #      mc mirror    – скопировать CSV из event_log/ в hw2-1/events/ (это «исходная таблица»);
   #                     --remove удаляет в S3 файлы, которых нет в event_log/, --exclude пропускает
   #                     служебный _manifest.json генератора
   rustfs-init:
