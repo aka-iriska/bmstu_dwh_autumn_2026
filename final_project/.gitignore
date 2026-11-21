@@ -1,0 +1,43 @@
+# Секреты и локальные настройки
+.env
+.env.*
+!.env.example
+# Конфиг Kafka-клиента для --client-config может содержать пароли
+*client*.json
+!*client*.example.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Spark / Hive локальные артефакты
+spark-warehouse/
+metastore_db/
+derby.log
+spark-events/
+checkpoints/
+
+# Состояние сервисов, если используются bind mount вместо named volumes
+volumes/
+.volumes/
+logs/
+airflow/logs/
+
+# Сгенерированные наборы (готовые fixture/demo коммитятся)
+data/custom*/
+data/generated*/
+output/
+tmp/
+
+# ОС и IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+# резервные копии и блокировки draw.io
+*.bkp
+.$*

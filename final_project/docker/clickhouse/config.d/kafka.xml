@@ -1,0 +1,7 @@
+<!-- Новая consumer group ClickHouse читает топик с начала, чтобы не пропустить
+     сообщения, отправленные до создания Kafka-таблицы. -->
+<clickhouse>
+    <kafka>
+        <auto_offset_reset>earliest</auto_offset_reset>
+    </kafka>
+</clickhouse>

@@ -1,0 +1,285 @@
+name: cinema-dwh
+
+x-project-env: &project-env
+  TZ: UTC
+  PYTHONPATH: /opt/airflow/project
+  S3_ENDPOINT: http://rustfs:9000
+  S3_BUCKET: cinema
+  AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-cinema-access}
+  AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-cinema-secret-key}
+  AWS_DEFAULT_REGION: us-east-1
+  AWS_EC2_METADATA_DISABLED: "true"
+  AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+  AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+  CLICKHOUSE_HOST: clickhouse
+  CLICKHOUSE_PORT: "8123"
+  CLICKHOUSE_USER: ${CLICKHOUSE_USER:-cinema}
+  CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-cinema}
+  KAFKA_BOOTSTRAP: kafka:9092
+  SPARK_MASTER: local[2]
+  SPARK_LOCAL_IP: 127.0.0.1
+  PYSPARK_PYTHON: /usr/local/bin/python
+
+x-airflow-env: &airflow-env
+  <<: *project-env
+  AIRFLOW__CORE__EXECUTOR: LocalExecutor
+  AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+  AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+  AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+  AIRFLOW__CORE__DEFAULT_TIMEZONE: utc
+  AIRFLOW__CORE__PARALLELISM: "2"
+  AIRFLOW__WEBSERVER__SECRET_KEY: local-cinema-webserver-secret
+  AIRFLOW__WEBSERVER__WORKERS: "2"   # экономим память
+  AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
+
+# Один образ проекта на всё, что запускает Python-код.
+x-project-image: &project-image
+  build:
+    context: .
+    dockerfile: docker/airflow/Dockerfile
+  image: cinema-dwh-project:airflow2.10.5-spark3.5.4
+  user: "50000:0"
+
+x-airflow-common: &airflow-common
+  <<: *project-image
+  environment: *airflow-env
+  volumes:
+    - ./dags:/opt/airflow/dags:ro
+    - .:/opt/airflow/project:ro
+    - airflow-logs:/opt/airflow/logs
+
+services:
+  # Kafka
+  kafka:
+    image: apache/kafka:3.9.0
+    depends_on:
+      volume-init:
+        condition: service_completed_successfully
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:${KAFKA_EXTERNAL_PORT:-9094}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_HEAP_OPTS: -Xms256m -Xmx512m   # стенду на 8 ГБ хватает с запасом
+    ports:
+      - "127.0.0.1:${KAFKA_EXTERNAL_PORT:-9094}:9094"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: [CMD-SHELL, "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 20s
+
+  kafka-init:
+    image: apache/kafka:3.9.0
+    depends_on:
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ./docker/kafka/create_topics.sh:/create_topics.sh:ro
+    entrypoint: [sh, /create_topics.sh]
+    restart: "no"
+
+  # S3 (RustFS)
+  volume-init:
+    image: alpine:3.21
+    user: "0:0"
+    volumes:
+      - rustfs-data:/data
+      - rustfs-logs:/logs
+      - airflow-logs:/airflow-logs
+      - kafka-data:/kafka-data
+    # Права на тома для непривилегированных пользователей образов.
+    command: [sh, -ec, "chown -R 10001:10001 /data /logs; chown -R 50000:0 /airflow-logs; chown -R 1000:1000 /kafka-data"]
+    restart: "no"
+
+  rustfs:
+    image: rustfs/rustfs:1.0.4
+    user: "10001:10001"
+    depends_on:
+      volume-init:
+        condition: service_completed_successfully
+    environment:
+      RUSTFS_VOLUMES: /data
+      RUSTFS_ADDRESS: 0.0.0.0:9000
+      RUSTFS_CONSOLE_ADDRESS: 0.0.0.0:9001
+      RUSTFS_CONSOLE_ENABLE: "true"
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY:-cinema-access}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY:-cinema-secret-key}
+      RUSTFS_OBS_LOG_DIRECTORY: /logs
+    ports:
+      - "127.0.0.1:${S3_PORT:-9000}:9000"
+      - "127.0.0.1:${S3_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - rustfs-data:/data
+      - rustfs-logs:/logs
+    healthcheck:
+      test: [CMD, curl, -fsS, http://localhost:9000/health]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  # Создаёт бакет и кладёт каталог выбранного набора.
+  s3-init:
+    <<: *project-image
+    environment: *project-env
+    depends_on:
+      rustfs:
+        condition: service_healthy
+    working_dir: /opt/airflow/project
+    volumes:
+      - .:/opt/airflow/project:ro
+    command: [python, scripts/load_catalogue.py, --dataset, "${DATASET:-fixture}"]
+    restart: "no"
+
+  # Kafka -> S3: своя consumer group cinema-s3-archiver, работает непрерывно и независимо от DAG.
+  archiver:
+    <<: *project-image
+    environment: *project-env
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      s3-init:
+        condition: service_completed_successfully
+    working_dir: /opt/airflow/project
+    volumes:
+      - .:/opt/airflow/project:ro
+    entrypoint: []
+    command: [python, -m, archiver.archiver]
+    restart: unless-stopped
+
+  # ClickHouse
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8.14.39
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      rustfs:
+        condition: service_healthy
+    environment:
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-cinema}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-cinema}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-cinema-access}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-cinema-secret-key}
+      TZ: UTC
+    ports:
+      - "127.0.0.1:${CLICKHOUSE_HTTP_PORT:-8123}:8123"
+    ulimits:
+      nofile: {soft: 262144, hard: 262144}
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+      - clickhouse-logs:/var/log/clickhouse-server
+      # DDL выполняется один раз, при первом старте с пустым томом.
+      - ./clickhouse/ddl:/docker-entrypoint-initdb.d:ro
+      - ./docker/clickhouse/config.d/named_collections.xml:/etc/clickhouse-server/config.d/named_collections.xml:ro
+      - ./docker/clickhouse/config.d/kafka.xml:/etc/clickhouse-server/config.d/kafka.xml:ro
+      - ./docker/clickhouse/users.d/cinema_user.xml:/etc/clickhouse-server/users.d/cinema_user.xml:ro
+    healthcheck:
+      test: [CMD-SHELL, "clickhouse-client --user \"$$CLICKHOUSE_USER\" --password \"$$CLICKHOUSE_PASSWORD\" -q 'SELECT 1' >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  # Airflow
+  postgres:
+    image: postgres:16.6-bookworm
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U airflow -d airflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  airflow-init:
+    <<: *airflow-common
+    depends_on:
+      postgres:
+        condition: service_healthy
+      volume-init:
+        condition: service_completed_successfully
+    environment:
+      <<: *airflow-env
+      _AIRFLOW_DB_MIGRATE: "true"
+      _AIRFLOW_WWW_USER_CREATE: "true"
+      _AIRFLOW_WWW_USER_USERNAME: ${AIRFLOW_USER:-student}
+      _AIRFLOW_WWW_USER_PASSWORD: ${AIRFLOW_PASSWORD:-student}
+      _AIRFLOW_WWW_USER_FIRSTNAME: Student
+      _AIRFLOW_WWW_USER_LASTNAME: Cinema
+      _AIRFLOW_WWW_USER_ROLE: Admin
+      _AIRFLOW_WWW_USER_EMAIL: student@example.com
+    command: version
+    restart: "no"
+
+  airflow-webserver:
+    <<: *airflow-common
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:${AIRFLOW_PORT:-8080}:8080"
+    command: webserver
+    healthcheck:
+      test: [CMD, curl, -fsS, http://localhost:8080/health]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
+
+  airflow-scheduler:
+    <<: *airflow-common
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+      s3-init:
+        condition: service_completed_successfully
+      clickhouse:
+        condition: service_healthy
+    command: scheduler
+    healthcheck:
+      test: [CMD, curl, -fsS, http://localhost:8974/health]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
+
+  # Инструменты: тесты, отправка в Kafka, демо
+  # docker compose run --rm tools pytest -q
+  # docker compose run --rm tools python scripts/replay_kafka.py --dataset data/fixture --bootstrap-servers kafka:9092
+  tools:
+    <<: *project-image
+    profiles: [tools]
+    environment: *project-env
+    working_dir: /opt/airflow/project
+    volumes:
+      - .:/opt/airflow/project
+    entrypoint: []
+    command: [pytest, -q]
+
+volumes:
+  kafka-data:
+  rustfs-data:
+  rustfs-logs:
+  clickhouse-data:
+  clickhouse-logs:
+  postgres-data:
+  airflow-logs:

@@ -1,0 +1,6 @@
+# В контекст сборки нужен только Dockerfile и constraints; код монтируется томами.
+*
+!docker/
+!docker/constraints-3.11.txt
+!docker/airflow/
+!docker/airflow/Dockerfile

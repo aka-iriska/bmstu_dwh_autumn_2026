@@ -1,0 +1,11 @@
+<!-- Дополнение к пользователю, которого образ создаёт из CLICKHOUSE_USER (users.d/default-user.xml):
+     право пользоваться named collection cinema_s3 (функция s3() при публикации витрин).
+     Имя пользователя должно совпадать с CLICKHOUSE_USER (по умолчанию cinema). -->
+<clickhouse>
+    <users>
+        <cinema>
+            <named_collection_control>1</named_collection_control>
+            <show_named_collections>1</show_named_collections>
+        </cinema>
+    </users>
+</clickhouse>
