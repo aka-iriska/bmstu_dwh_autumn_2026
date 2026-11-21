@@ -1,0 +1,15 @@
+-- Контрольные суммы ДО пересчёта по параметрам
+
+SELECT * FROM (
+SELECT 'batch_views_minute' AS t, count() AS rows, sum(cityHash64(minute_start, content_id, views_count, watch_time_seconds_sum)) AS business_hash FROM cinema.batch_views_minute
+UNION ALL SELECT 'batch_views_country_tier_daily', count(), sum(cityHash64(event_date, country, subscription_tier, views_count, watch_time_seconds_sum)) FROM cinema.batch_views_country_tier_daily
+UNION ALL SELECT 'batch_top_content_daily', count(), sum(cityHash64(event_date, rank, content_id, views_count)) FROM cinema.batch_top_content_daily
+UNION ALL SELECT 'batch_search_words_daily', count(), sum(cityHash64(event_date, word, word_count)) FROM cinema.batch_search_words_daily
+) ORDER BY t
+
+   ┌─t──────────────────────────────┬─rows─┬────────business_hash─┐
+1. │ batch_search_words_daily       │   39 │ 12610160965792570253 │
+2. │ batch_top_content_daily        │   15 │ 13013864290781625804 │
+3. │ batch_views_country_tier_daily │   36 │  5743205594883616121 │
+4. │ batch_views_minute             │ 4243 │ 18177549977963138196 │
+   └────────────────────────────────┴──────┴──────────────────────┘

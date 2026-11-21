@@ -1,0 +1,93 @@
+{
+  "run_id": "b20260105_afb0a6f2",
+  "checks": [
+    {
+      "name": "unique_keys_views_minute",
+      "ok": true,
+      "details": {
+        "duplicate_keys": 0
+      }
+    },
+    {
+      "name": "unique_keys_views_country_tier_daily",
+      "ok": true,
+      "details": {
+        "duplicate_keys": 0
+      }
+    },
+    {
+      "name": "unique_keys_top_content_daily",
+      "ok": true,
+      "details": {
+        "duplicate_keys": 0
+      }
+    },
+    {
+      "name": "unique_keys_search_words_daily",
+      "ok": true,
+      "details": {
+        "duplicate_keys": 0
+      }
+    },
+    {
+      "name": "unique_keys_clean_events",
+      "ok": true,
+      "details": {
+        "duplicate_keys": 0
+      }
+    },
+    {
+      "name": "unique_keys_views_enriched",
+      "ok": true,
+      "details": {
+        "duplicate_keys": 0
+      }
+    },
+    {
+      "name": "scd2_no_overlap",
+      "ok": true,
+      "details": {
+        "valid_from>=valid_to": 0,
+        "gaps_or_overlaps": 0,
+        "repeated_states": 0,
+        "users_without_single_current": 0,
+        "duplicate_user_valid_from": 0
+      }
+    },
+    {
+      "name": "one_catalogue_item",
+      "ok": false,
+      "details": {
+        "views_without_match": 1,
+        "views_with_several_matches": 0
+      }
+    },
+    {
+      "name": "one_profile_version",
+      "ok": true,
+      "details": {
+        "views_without_match": 0,
+        "views_with_several_matches": 0
+      }
+    },
+    {
+      "name": "views_reconcile",
+      "ok": false,
+      "details": {
+        "views_minute": 6,
+        "views_country_tier_daily": 6,
+        "views_enriched": 6,
+        "clean_events_views": 7
+      }
+    },
+    {
+      "name": "top_ranks_valid",
+      "ok": true,
+      "details": {
+        "days_with_bad_ranks": 0,
+        "repeated_content": 0
+      }
+    }
+  ],
+  "ok": false
+}

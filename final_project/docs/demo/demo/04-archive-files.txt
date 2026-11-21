@@ -1,0 +1,29 @@
+-- Архив S3: файлы raw/ и число строк в каждом (повторы и поздние сообщения тоже здесь)
+
+SELECT _path AS file, count() AS lines FROM s3(cinema_s3, filename = 'raw/**/*.jsonl', format = 'JSONAsString') GROUP BY file ORDER BY file
+
+    ┌─file───────────────────────────────────────────────────────────────────┬─lines─┐
+ 1. │ cinema/raw/catalogue/catalogue.jsonl                                   │   200 │
+ 2. │ cinema/raw/events/ingest_date=2026-11-21/part-p0-o0-499.jsonl          │   500 │
+ 3. │ cinema/raw/events/ingest_date=2026-11-21/part-p0-o1000-1499.jsonl      │   500 │
+ 4. │ cinema/raw/events/ingest_date=2026-11-21/part-p0-o1500-1999.jsonl      │   500 │
+ 5. │ cinema/raw/events/ingest_date=2026-11-21/part-p0-o2000-2499.jsonl      │   500 │
+ 6. │ cinema/raw/events/ingest_date=2026-11-21/part-p0-o2500-2664.jsonl      │   165 │
+ 7. │ cinema/raw/events/ingest_date=2026-11-21/part-p0-o2665-2820.jsonl      │   156 │
+ 8. │ cinema/raw/events/ingest_date=2026-11-21/part-p0-o500-999.jsonl        │   500 │
+ 9. │ cinema/raw/events/ingest_date=2026-11-21/part-p1-o0-499.jsonl          │   500 │
+10. │ cinema/raw/events/ingest_date=2026-11-21/part-p1-o1000-1329.jsonl      │   330 │
+11. │ cinema/raw/events/ingest_date=2026-11-21/part-p1-o1330-1400.jsonl      │    71 │
+12. │ cinema/raw/events/ingest_date=2026-11-21/part-p1-o500-999.jsonl        │   500 │
+13. │ cinema/raw/events/ingest_date=2026-11-21/part-p2-o0-499.jsonl          │   500 │
+14. │ cinema/raw/events/ingest_date=2026-11-21/part-p2-o1000-1499.jsonl      │   500 │
+15. │ cinema/raw/events/ingest_date=2026-11-21/part-p2-o1500-1823.jsonl      │   324 │
+16. │ cinema/raw/events/ingest_date=2026-11-21/part-p2-o1824-1915.jsonl      │    92 │
+17. │ cinema/raw/events/ingest_date=2026-11-21/part-p2-o500-999.jsonl        │   500 │
+18. │ cinema/raw/profile_changes/ingest_date=2026-11-21/part-p0-o0-87.jsonl  │    88 │
+19. │ cinema/raw/profile_changes/ingest_date=2026-11-21/part-p0-o88-92.jsonl │     5 │
+20. │ cinema/raw/profile_changes/ingest_date=2026-11-21/part-p1-o0-48.jsonl  │    49 │
+21. │ cinema/raw/profile_changes/ingest_date=2026-11-21/part-p1-o49-49.jsonl │     1 │
+22. │ cinema/raw/profile_changes/ingest_date=2026-11-21/part-p2-o0-57.jsonl  │    58 │
+23. │ cinema/raw/profile_changes/ingest_date=2026-11-21/part-p2-o58-59.jsonl │     2 │
+    └────────────────────────────────────────────────────────────────────────┴───────┘

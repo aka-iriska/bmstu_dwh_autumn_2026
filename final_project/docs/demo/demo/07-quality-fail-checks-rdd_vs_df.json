@@ -1,0 +1,24 @@
+{
+  "run_id": "b20260105_afb0a6f2",
+  "dates": [
+    "2026-01-02",
+    "2026-01-05"
+  ],
+  "comparisons": [
+    {
+      "name": "search_words_daily",
+      "ok": true,
+      "rdd_rows": 13,
+      "df_rows": 13,
+      "mismatches": []
+    },
+    {
+      "name": "top_content_daily",
+      "ok": true,
+      "rdd_rows": 5,
+      "df_rows": 5,
+      "mismatches": []
+    }
+  ],
+  "ok": true
+}

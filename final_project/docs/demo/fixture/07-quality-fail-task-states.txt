@@ -1,0 +1,15 @@
+-- Состояния задач: quality_checks упала, publish_to_clickhouse не выполнялась (upstream_failed)
+-- $ docker compose exec -T airflow-scheduler airflow tasks states-for-dag-run cinema_batch backfill__2026-01-05T00:00:00+00:00
+
+dag_id       | execution_date            | task_id                  | state           | start_date                       | end_date                        
+=============+===========================+==========================+=================+==================================+=================================
+cinema_batch | 2026-01-05T00:00:00+00:00 | publish_to_clickhouse    | upstream_failed | 2026-11-21T14:24:00.234180+00:00 | 2026-11-21T14:24:00.234180+00:00
+cinema_batch | 2026-01-05T00:00:00+00:00 | quality_checks           | failed          | 2026-11-21T14:23:47.349816+00:00 | 2026-11-21T14:23:59.922802+00:00
+cinema_batch | 2026-01-05T00:00:00+00:00 | advance_serving_boundary | upstream_failed | 2026-11-21T14:24:00.584110+00:00 | 2026-11-21T14:24:00.584110+00:00
+cinema_batch | 2026-01-05T00:00:00+00:00 | resolve_run_context      | success         | 2026-11-21T14:21:45.594137+00:00 | 2026-11-21T14:21:46.267276+00:00
+cinema_batch | 2026-01-05T00:00:00+00:00 | freeze_snapshot          | success         | 2026-11-21T14:21:46.667715+00:00 | 2026-11-21T14:21:47.514626+00:00
+cinema_batch | 2026-01-05T00:00:00+00:00 | prepare_data             | success         | 2026-11-21T14:21:47.712089+00:00 | 2026-11-21T14:22:01.549826+00:00
+cinema_batch | 2026-01-05T00:00:00+00:00 | build_user_profile_scd2  | success         | 2026-11-21T14:22:02.458296+00:00 | 2026-11-21T14:22:12.456573+00:00
+cinema_batch | 2026-01-05T00:00:00+00:00 | build_marts              | success         | 2026-11-21T14:22:12.942982+00:00 | 2026-11-21T14:22:27.925204+00:00
+cinema_batch | 2026-01-05T00:00:00+00:00 | compare_rdd_df           | success         | 2026-11-21T14:22:28.684515+00:00 | 2026-11-21T14:22:41.829853+00:00
+                                                                                                                                                           

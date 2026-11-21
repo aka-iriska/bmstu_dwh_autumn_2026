@@ -1,0 +1,13 @@
+-- Архив S3: файлы raw/ и число строк в каждом (повторы и поздние сообщения тоже здесь)
+
+SELECT _path AS file, count() AS lines FROM s3(cinema_s3, filename = 'raw/**/*.jsonl', format = 'JSONAsString') GROUP BY file ORDER BY file
+
+   ┌─file─────────────────────────────────────────────────────────────────┬─lines─┐
+1. │ cinema/raw/catalogue/catalogue.jsonl                                 │   200 │
+2. │ cinema/raw/events/ingest_date=2026-11-21/part-p0-o0-2.jsonl          │     3 │
+3. │ cinema/raw/events/ingest_date=2026-11-21/part-p2-o0-22.jsonl         │    23 │
+4. │ cinema/raw/events/ingest_date=2026-11-21/part-p2-o23-24.jsonl        │     2 │
+5. │ cinema/raw/profile_changes/ingest_date=2026-11-21/part-p0-o0-1.jsonl │     2 │
+6. │ cinema/raw/profile_changes/ingest_date=2026-11-21/part-p2-o0-5.jsonl │     6 │
+7. │ cinema/raw/profile_changes/ingest_date=2026-11-21/part-p2-o6-6.jsonl │     1 │
+   └──────────────────────────────────────────────────────────────────────┴───────┘

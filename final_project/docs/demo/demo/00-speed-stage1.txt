@@ -1,0 +1,7 @@
+-- Speed-слой после первой части: повторы учтены один раз
+
+SELECT (SELECT count() FROM cinema.speed_views FINAL) AS unique_views, (SELECT sum(views_count) FROM cinema.speed_views_minute) AS views_in_minutes, (SELECT sum(watch_time_seconds_sum) FROM cinema.speed_views_minute) AS watch_seconds
+
+   ┌─unique_views─┬─views_in_minutes─┬─watch_seconds─┐
+1. │         4260 │             4260 │      10748208 │
+   └──────────────┴──────────────────┴───────────────┘

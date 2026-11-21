@@ -1,0 +1,7 @@
+-- Метаполя 3 января ДО повтора
+
+SELECT DISTINCT run_id, interval_start, interval_end, processed_at FROM cinema.batch_top_content_daily WHERE event_date = '2026-01-03'
+
+   ┌─run_id─────────────┬──────interval_start─┬────────interval_end─┬────────processed_at─┐
+1. │ b20260103_51477cb5 │ 2026-01-03 00:00:00 │ 2026-01-04 00:00:00 │ 2026-11-21 14:34:54 │
+   └────────────────────┴─────────────────────┴─────────────────────┴─────────────────────┘
